@@ -47,10 +47,11 @@ const int rt_default_ecmp = 0;
  * table_id is specified explicitly as sysctl scan argument, while in FreeBSD it
  * is handled implicitly by changing default table using setfib() syscall.
  *
- * OpenBSD allows to use route metric. The behavior is controlled by these macro
- * KRT_USE_METRIC, which enables use of rtm_priority in route send/recevive.
- * There is also KRT_DEFAULT_METRIC and KRT_MAX_METRIC for default and maximum
- * metric values.
+ * Both FreeBSD and OpenBSD allows to use route metric. The behavior is controlled
+ * by KRT_USE_RT_METRIC macro for FreeBSD, and KRT_USE_METRIC macro for OpenBSD,
+ * which enables use of rtm_metric/rtm_priority in route send/recevive.
+ * For OpenBSD, There is also KRT_DEFAULT_METRIC and KRT_MAX_METRIC for default
+ * and maximum metric values.
  *
  * KRT_SHARED_SOCKET	- use shared kernel socked instead of one for each krt_proto
  * KRT_USE_SETFIB_SCAN	- use setfib() for sysctl() route scan
@@ -64,6 +65,7 @@ const int rt_default_ecmp = 0;
 #define KRT_USE_SETFIB_SCAN
 #define KRT_USE_SETFIB_SOCK
 #define KRT_USE_SYSCTL_NET_FIBS
+#define KRT_USE_RT_METRIC
 #endif
 
 #ifdef __OpenBSD__
@@ -253,6 +255,10 @@ krt_send_route(struct krt_proto *p, int cmd, rte *e)
 
 #ifdef KRT_USE_METRIC
   msg.rtm.rtm_priority = KRT_CF->sys.metric;
+#endif
+
+#ifdef KRT_USE_RT_METRIC
+  msg.rtm.rtm_rmx.rmx_metric = KRT_CF->sys.metric;
 #endif
 
 #ifdef RTF_REJECT
@@ -611,6 +617,15 @@ krt_read_route(struct ks_msg *msg, struct krt_proto *p, int scan)
     .id = EA_KRT_METRIC,
     .type = EAF_TYPE_INT,
     .u.data = msg->rtm.rtm_priority,
+  };
+#endif
+
+#ifdef KRT_USE_RT_METRIC
+  ea->count++;
+  ea->attrs[1] = (eattr) {
+    .id = EA_KRT_METRIC,
+    .type = EAF_TYPE_INT,
+    .u.data = msg->rtm.rtm_rmx.rmx_metric,
   };
 #endif
 
