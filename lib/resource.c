@@ -129,11 +129,11 @@ pool_free(resource *P)
   pool *p = (pool *) P;
 
   POOL_LOCK;
+  /* Free resource's hook first */
   WALK_TLIST_DELSAFE(resource, r, &p->inside)
-    {
-      r->class->free(r);
-      xfree(r);
-    }
+    r->class->free(r);
+  WALK_TLIST_DELSAFE(resource, r, &p->inside)
+    xfree(r);
   POOL_UNLOCK;
 }
 
